@@ -29,7 +29,7 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // Register Users 
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
-const User = require('../models/User.js');
+const User = require('./models/User');
 
 app.post('/api/register',
   [
