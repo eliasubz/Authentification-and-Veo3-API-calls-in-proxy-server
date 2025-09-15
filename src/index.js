@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const veo3Routes = require('./routes/veo3');
 // const registerRoute = require('../node_modules/routes/register'); // adjust path if needed
 
 
@@ -25,6 +26,9 @@ mongoose.connect(mongo_connection_url, {
 // Start the server
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Test Veo3 functionalities
+app.use('/api', veo3Routes);
 
 // Register Users 
 const bcrypt = require('bcryptjs');
