@@ -1,11 +1,21 @@
 const express = require('express');
 const mongoose = require('mongoose');
+// const registerRoute = require('../node_modules/routes/register'); // adjust path if needed
+
 
 const app = express();
+// Middleware to parse JSON
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// Routes
+// app.use(registerRoute);
+
+// testing environment variable
+require('dotenv').config();
+mongo_connection_url = process.env.mongo_uri
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/authDB', {
+mongoose.connect(mongo_connection_url, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -19,7 +29,7 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // Register Users 
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
-const User = require('./models/User');
+const User = require('../models/User.js');
 
 app.post('/api/register',
   [
@@ -28,16 +38,27 @@ app.post('/api/register',
   ],
   async (req, res) => {
     const errors = validationResult(req);
+    // console.log(req)
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const { username, email, password } = req.body;
+    console.log("This is the server: ", req.body)
 
     try {
+      console.log(username, email, password)
       const hashedPassword = await bcrypt.hash(password, 10);
-      const user = new User({ username, email, password: hashedPassword });
+      let permission = 'user';
+      if (username == "Joao") {
+        permission = 'admin';
+      } else {
+        console.log("Username: ", username)
+      }
+      console.log(permission)
+      const user = new User({ username, email, password: hashedPassword, role: permission });
       await user.save();
       res.status(201).json({ message: 'User registered successfully' });
     } catch (err) {
+      console.log("We got until here but this would mean we have an error status 500")
       res.status(500).json({ message: 'Error registering user', error: err.message });
     }
   }
@@ -63,6 +84,9 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Get Role
+app.get('/api/get_Role')
+
 // Create Middleware 
 const authMiddleware = (req, res, next) => {
   const token = req.header('Authorization');
@@ -73,12 +97,14 @@ const authMiddleware = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(400).json({ message: 'Invalid token' });
+
+    res.status(400).json({ message: `Invalid token ${token}` });
   }
 };
 
 const roleMiddleware = (requiredRole) => (req, res, next) => {
-  if (req.user.role !== requiredRole) return res.status(403).json({ message: 'Access forbidden' });
+
+  if (req.user.role !== requiredRole) return res.status(403).json({ message: `Access forbidden ${req.user.role}` });
   next();
 };
 
