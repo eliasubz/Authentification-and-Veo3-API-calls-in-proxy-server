@@ -27,8 +27,6 @@ mongoose.connect(mongo_connection_url, {
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-// Test Veo3 functionalities
-app.use('/api', veo3Routes);
 
 // Register Users 
 const bcrypt = require('bcryptjs');
@@ -99,6 +97,8 @@ const authMiddleware = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, 'your_secret_key');
     req.user = decoded;
+    console.log(req.user)
+    console.log(req.user.id)
     next();
   } catch (err) {
 
@@ -107,7 +107,6 @@ const authMiddleware = (req, res, next) => {
 };
 
 const roleMiddleware = (requiredRole) => (req, res, next) => {
-
   if (req.user.role !== requiredRole) return res.status(403).json({ message: `Access forbidden ${req.user.role}` });
   next();
 };
@@ -116,6 +115,15 @@ app.get('/api/user', authMiddleware, (req, res) => {
   res.status(200).json({ message: 'Welcome to the user dashboard', user: req.user });
 });
 
+// Test Veo3 functionalities
+app.use('/api', authMiddleware, veo3Routes);
+
 app.get('/api/admin', [authMiddleware, roleMiddleware('admin')], (req, res) => {
   res.status(200).json({ message: 'Welcome to the admin dashboard', user: req.user });
 });
+
+// Buy credits
+app.get('/api/buy_credit', authMiddleware, (req, res) => {
+  req.user.credits += 5;
+  res.status(200).json({ message: `You bought 5 credits and have now a total of ${req.user.credits}`, user: req.user });
+})

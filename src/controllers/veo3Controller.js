@@ -5,7 +5,7 @@ const User = require('../models/User');
 exports.generate = async (req, res) => {
     try {
         console.log("Before asking for id")
-        const userId = req.user._id;
+        const userId = req.user.id;
         console.log("After asking for id", userId)
 
         // Check user credits
