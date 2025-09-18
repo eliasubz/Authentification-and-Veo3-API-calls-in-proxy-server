@@ -90,15 +90,17 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/get_Role')
 
 // Create Middleware 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   const token = req.header('Authorization');
   if (!token) return res.status(401).json({ message: 'Access denied. No token provided.' });
 
   try {
     const decoded = jwt.verify(token, 'your_secret_key');
-    req.user = decoded;
-    console.log(req.user)
-    console.log(req.user.id)
+    // req.user = decoded;
+    const user = await User.findById(decoded.id); // fetch from DB
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    console.log(user)
+    req.user = user; // attach full Mongoose doc
     next();
   } catch (err) {
 
@@ -123,7 +125,8 @@ app.get('/api/admin', [authMiddleware, roleMiddleware('admin')], (req, res) => {
 });
 
 // Buy credits
-app.get('/api/buy_credit', authMiddleware, (req, res) => {
+app.get('/api/buy_credit', authMiddleware, async (req, res) => {
   req.user.credits += 5;
+  await req.user.save();
   res.status(200).json({ message: `You bought 5 credits and have now a total of ${req.user.credits}`, user: req.user });
 })
