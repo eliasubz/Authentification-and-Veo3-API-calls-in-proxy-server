@@ -4,12 +4,11 @@ const User = require('../models/User');
 
 exports.generate = async (req, res) => {
     try {
-        console.log("Before asking for id")
         const userId = req.user.id;
-        console.log("After asking for id", userId)
 
         // Check user credits
-        const user = await User.findById(userId);
+        console.log(req.user.credits);
+        const user = req.user;
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         if (user.credits <= 0) {
@@ -17,7 +16,7 @@ exports.generate = async (req, res) => {
         }
 
         // Call Veo3 service
-        const result = await veo3Service.generateSomething(req.body);
+        const result = await veo3Service.createVeo3Job(user.id, req.body);
 
         // Deduct credit
         user.credits -= 1;
