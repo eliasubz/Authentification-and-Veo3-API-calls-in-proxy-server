@@ -16,7 +16,7 @@ exports.generate = async (req, res) => {
         }
 
         // Call Veo3 service
-        const result = await veo3Service.createVeo3Job(user.id, req.body);
+        const result = await veo3Service.createVeo3Job(user.id, req.body, 1);
 
         // Deduct credit
         user.credits -= 1;

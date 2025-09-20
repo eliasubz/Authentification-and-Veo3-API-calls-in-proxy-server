@@ -2,12 +2,14 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Veo3Job = require('../models/Veo3Job');
-// const queue = require('./queueService'); // wrapper for SQS/Bull
+const queue = require('./queueService'); // wrapper for SQS/Bull
 
 async function createVeo3Job(userId, body, cost) {
     cost = 1
+
     const session = await mongoose.startSession();
-    console.log('Veo3Service was used!!!');
+    console.log('Let\'s work on the veo3Service!!!');
+    console.log(body);
     session.startTransaction();
     try {
         const user = await User.findById(userId).session(session);
@@ -35,6 +37,7 @@ async function createVeo3Job(userId, body, cost) {
         await queue.enqueue('veo3', { jobId: job[0]._id.toString(), userId: user._id, params: body });
         return job[0];
     } catch (err) {
+        console.log(err)
         await session.abortTransaction();
         session.endSession();
         throw err;
