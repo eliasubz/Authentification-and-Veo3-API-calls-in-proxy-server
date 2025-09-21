@@ -44,8 +44,8 @@ const veo3Worker = new Worker(
     },
     {
         connection,
-        lockDuration: 100,
-        maxTTL: 100, // 30 seconds
+        // lockDuration: 100,
+        // maxTTL: 100, // 30 seconds
 
     }
 );
