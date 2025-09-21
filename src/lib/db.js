@@ -1,13 +1,23 @@
-// lib/db.js
 const mongoose = require('mongoose');
+const { mongoUri } = require('../config'); // make sure config/index.js exports mongoUri
+
 let conn = null;
-module.exports = async (mongoUri) => {
-    if (conn) return conn;
-    conn = await mongoose.connect(mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    })
-        .then(() => console.log('MongoDB connected'))
-        .catch((err) => console.error('MongoDB connection failed:', err))
-    return conn;
-};
+
+async function connectDB() {
+    if (conn) return conn; // reuse existing connection
+
+    try {
+        conn = await mongoose.connect(mongoUri, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+
+        console.log('MongoDB connected');
+        return conn;
+    } catch (err) {
+        console.error('MongoDB connection failed:', err);
+        throw err;
+    }
+}
+
+module.exports = connectDB;
