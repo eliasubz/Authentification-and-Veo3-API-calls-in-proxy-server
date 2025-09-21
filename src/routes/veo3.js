@@ -13,4 +13,7 @@ router.post('/veo3/generate', veo3Controller.generate);
 // router.get('/veo3/credits', authMiddleware, veo3Controller.getCredits);
 router.get('/veo3/credits', veo3Controller.getCredits);
 
+// router.get('/veo3/credits', authMiddleware, veo3Controller.buyCredits);
+router.get('/veo3/buy_credit', veo3Controller.buyCredits);
+
 module.exports = router;

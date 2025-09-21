@@ -5,6 +5,14 @@ const IORedis = require('ioredis');
 // connect to redis (default local, or use REDIS_URL env var)
 const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
 
+connection.on("connect", () => {
+    console.log("Redis connected");
+});
+
+connection.on("error", (err) => {
+    console.error("Redis connection failed:", err);
+});
+
 const veo3Queue = new Queue('veo3', { connection });
 
 async function enqueue(queueName, data) {

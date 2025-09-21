@@ -9,8 +9,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-// app.use(registerRoute);
+
 
 // testing environment variable
 require('dotenv').config();
@@ -99,7 +98,7 @@ const authMiddleware = async (req, res, next) => {
     // req.user = decoded;
     const user = await User.findById(decoded.id); // fetch from DB
     if (!user) return res.status(404).json({ message: 'User not found' });
-    console.log(user)
+    // console.log(user)
     req.user = user; // attach full Mongoose doc
     // console.log("In authMiddleware the body is: ", req.body());
     next();
@@ -124,10 +123,3 @@ app.use('/api', authMiddleware, veo3Routes);
 app.get('/api/admin', [authMiddleware, roleMiddleware('admin')], (req, res) => {
   res.status(200).json({ message: 'Welcome to the admin dashboard', user: req.user });
 });
-
-// Buy credits
-app.get('/api/buy_credit', authMiddleware, async (req, res) => {
-  req.user.credits += 5;
-  await req.user.save();
-  res.status(200).json({ message: `You bought 5 credits and have now a total of ${req.user.credits}`, user: req.user });
-})

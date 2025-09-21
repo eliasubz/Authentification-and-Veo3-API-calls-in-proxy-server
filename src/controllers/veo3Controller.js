@@ -38,3 +38,16 @@ exports.getCredits = async (req, res) => {
         res.status(500).json({ message: 'Error fetching credits', error: err.message });
     }
 };
+
+exports.buyCredits = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found in veo3Controller.buyCredits' });
+        user.credits += 5;
+        await req.user.save();
+        res.status(200).json({ message: `You bought 5 credits and have now a total of ${req.user.credits}`, user: req.user });
+    } catch (err) {
+        res.status(500).json({ message: `Error buying Credits`, error: err.message });
+
+    }
+}
