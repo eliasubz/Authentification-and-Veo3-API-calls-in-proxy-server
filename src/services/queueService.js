@@ -1,6 +1,8 @@
 // services/queueService.js
 const { Queue } = require('bullmq');
 const IORedis = require('ioredis');
+require('dotenv').config();
+
 
 // connect to redis (default local, or use REDIS_URL env var)
 const connection = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');

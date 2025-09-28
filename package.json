@@ -19,5 +19,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
     "routes": "^2.1.0"
+  },
+  "devDependencies": {
+    "@gradio/client": "^1.19.0"
   }
 }
