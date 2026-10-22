@@ -1,30 +1,29 @@
 // controllers/veo3Controller.js
 const veo3Service = require('../services/veo3Service');
 const User = require('../models/User');
+const Veo3Job = require('../models/Veo3Job');
 
 exports.generate = async (req, res) => {
     try {
-        const userId = req.user.id;
+        if (!req.body?.prompt) return res.status(400).json({ message: 'prompt is required' });
 
-        // Check user credits
-        console.log(req.user.credits);
-        const user = req.user;
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        // Reserves the credit and enqueues the job in one transaction
+        const job = await veo3Service.createVeo3Job(req.user.id, req.body, 1);
 
-        if (user.credits <= 0) {
-            return res.status(403).json({ message: 'Not enough credits' });
-        }
-
-        // Call Veo3 service
-        const result = await veo3Service.createVeo3Job(user.id, req.body, 1);
-
-        // Deduct credit
-        user.credits -= 1;
-        await user.save();
-
-        res.status(200).json({ message: 'Veo3 generation successful', data: result });
+        res.status(202).json({ message: 'Generation queued', jobId: job._id, status: job.status });
     } catch (err) {
-        res.status(500).json({ message: 'Error calling Veo3', error: err.message });
+        const code = err.message === 'Insufficient credits' ? 403 : 500;
+        res.status(code).json({ message: 'Error queueing generation', error: err.message });
+    }
+};
+
+exports.getJob = async (req, res) => {
+    try {
+        const job = await Veo3Job.findOne({ _id: req.params.id, owner: req.user.id }).select('-params.pet_image');
+        if (!job) return res.status(404).json({ message: 'Job not found' });
+        res.status(200).json(job);
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching job', error: err.message });
     }
 };
 
@@ -41,13 +40,11 @@ exports.getCredits = async (req, res) => {
 
 exports.buyCredits = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        // Atomic increment, so concurrent requests can't overwrite each other
+        const user = await User.findByIdAndUpdate(req.user.id, { $inc: { credits: 5 } }, { new: true });
         if (!user) return res.status(404).json({ message: 'User not found in veo3Controller.buyCredits' });
-        user.credits += 5;
-        await req.user.save();
-        res.status(200).json({ message: `You bought 5 credits and have now a total of ${req.user.credits}`, user: req.user });
+        res.status(200).json({ message: `You bought 5 credits and have now a total of ${user.credits}`, user });
     } catch (err) {
         res.status(500).json({ message: `Error buying Credits`, error: err.message });
-
     }
-}
+};

@@ -9,4 +9,7 @@ const UserSchema = new mongoose.Schema({
     credits: { type: Number, default: 0 },      // <-- fixed
 });
 
+// Never send the password hash in API responses
+UserSchema.set('toJSON', { transform: (doc, ret) => { delete ret.password; return ret; } });
+
 module.exports = mongoose.model('User', UserSchema);
