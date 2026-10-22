@@ -1,18 +1,35 @@
-const fs = require('fs/promises');
-const path = require('path');
 const { Worker } = require('bullmq');
 const mongoose = require('mongoose');
 const Veo3Job = require('../models/Veo3Job');
 const User = require('../models/User');
+const Pet = require('../models/Pet');
 const { generateImage } = require('../services/runpodApi');
-const { mongoUri, redis, resultsDir } = require('../config');
+const storage = require('../services/storage');
+const { mongoUri, redis } = require('../config');
 
 mongoose.connect(mongoUri)
     .then(() => console.log('MongoDB connected'))
     .catch((err) => console.error('MongoDB connection failed:', err));
 
 // Only forward the fields the GPU worker understands.
-const INPUT_KEYS = ['prompt', 'pet_image', 'negative_prompt', 'ip_adapter_scale', 'steps', 'guidance_scale', 'width', 'height', 'seed'];
+const INPUT_KEYS = ['prompt', 'pet_image', 'negative_prompt', 'ip_adapter_scale', 'lora_scale', 'steps', 'guidance_scale', 'width', 'height', 'seed'];
+
+// Personalize with the pet's LoRA once trained, else zero-shot IP-Adapter with its first photo.
+// "{pet}" in the prompt becomes "sks cat" (LoRA) or "cat" (IP-Adapter); without it the subject is prepended.
+async function applyPet(input, petId) {
+    const pet = await Pet.findById(petId);
+    if (!pet) throw new Error(`Pet ${petId} not found`);
+
+    let subject = pet.species;
+    if (pet.status === 'ready') {
+        input.lora = pet.loraUrl;
+        subject = pet.instancePrompt.replace(/^a photo of /, '');
+    } else if (!input.pet_image) {
+        input.pet_image = await storage.toWorkerInput(pet.photos[0]);
+    }
+    input.prompt = input.prompt.includes('{pet}') ? input.prompt.replaceAll('{pet}', subject) : `${subject}, ${input.prompt}`;
+    return input.lora ? 'lora' : 'ip_adapter';
+}
 
 const veo3Worker = new Worker(
     'veo3',
@@ -21,22 +38,22 @@ const veo3Worker = new Worker(
 
         await Veo3Job.findByIdAndUpdate(job.data.jobId, { status: 'running', startedAt: new Date() });
 
-        const input = Object.fromEntries(INPUT_KEYS.filter((k) => job.data.params[k] !== undefined).map((k) => [k, job.data.params[k]]));
-        const { image_base64, ...metrics } = await generateImage(input);
+        const { params } = job.data;
+        const input = Object.fromEntries(INPUT_KEYS.filter((k) => params[k] !== undefined).map((k) => [k, params[k]]));
+        const method = params.petId ? await applyPet(input, params.petId) : (input.pet_image ? 'ip_adapter' : 'text');
 
-        await fs.mkdir(resultsDir, { recursive: true });
-        const fileName = `${job.data.jobId}.png`;
-        await fs.writeFile(path.join(resultsDir, fileName), Buffer.from(image_base64, 'base64'));
+        const { image_base64, ...metrics } = await generateImage(input);
+        const resultUrl = await storage.save(`results/${job.data.jobId}.png`, Buffer.from(image_base64, 'base64'), 'image/png');
 
         await Veo3Job.findByIdAndUpdate(job.data.jobId, {
             status: 'completed',
-            resultUrl: `/results/${fileName}`,
-            metrics,
+            resultUrl,
+            metrics: { ...metrics, method, prompt: input.prompt },
             completedAt: new Date(),
         });
 
-        console.log(`Job ${job.id} completed: inference ${metrics.timings_ms?.inference?.toFixed(0)}ms, end-to-end ${metrics.endToEndMs}ms`);
-        return { resultUrl: `/results/${fileName}` };
+        console.log(`Job ${job.id} completed (${method}): inference ${metrics.timings_ms?.inference?.toFixed(0)}ms, end-to-end ${metrics.endToEndMs}ms`);
+        return { resultUrl };
     },
     { connection: redis, concurrency: Number(process.env.WORKER_CONCURRENCY || 4) }
 );

@@ -42,4 +42,4 @@ app-example
 # generated native folders
 /ios
 /android
-public/results/
+public/

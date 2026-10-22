@@ -12,7 +12,7 @@ exports.generate = async (req, res) => {
 
         res.status(202).json({ message: 'Generation queued', jobId: job._id, status: job.status });
     } catch (err) {
-        const code = err.message === 'Insufficient credits' ? 403 : 500;
+        const code = { 'Insufficient credits': 403, 'Pet not found': 404 }[err.message] || 500;
         res.status(code).json({ message: 'Error queueing generation', error: err.message });
     }
 };
