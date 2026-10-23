@@ -5,8 +5,8 @@ const { trainLora } = require('../services/runpodApi');
 const { toWorkerInput } = require('../services/storage');
 const { redis } = require('../config');
 
-// Only forward the knobs the training worker understands.
-const CONFIG_KEYS = ['steps', 'rank', 'learning_rate', 'resolution', 'prior_preservation', 'seed'];
+// Only forward the knobs the training worker understands (production defaults live in the worker).
+const CONFIG_KEYS = ['resolution', 'batch_size', 'learning_rate', 'rank', 'images_seen', 'seed'];
 
 const trainWorker = new Worker(
     'train',
@@ -16,7 +16,7 @@ const trainWorker = new Worker(
         console.log(`Training LoRA for pet ${pet._id} (${pet.photos.length} photos)`);
 
         const config = job.data.config || {};
-        const { lora_url, lora_path, instance_prompt, ...metrics } = await trainLora({
+        const { lora_url, lora_path, instance_prompt, description, ...metrics } = await trainLora({
             ...Object.fromEntries(CONFIG_KEYS.filter((k) => config[k] !== undefined).map((k) => [k, config[k]])),
             images: await Promise.all(pet.photos.map(toWorkerInput)),
             class_word: pet.species,
@@ -28,6 +28,7 @@ const trainWorker = new Worker(
             // lora_path only works when generation runs on the same machine (local/Colab testing)
             loraUrl: lora_url || lora_path,
             instancePrompt: instance_prompt,
+            description,
             trainMetrics: metrics,
         });
         console.log(`Pet ${pet._id} ready: train ${(metrics.timings_ms?.total / 60000).toFixed(1)} min, end-to-end ${(metrics.endToEndMs / 60000).toFixed(1)} min`);

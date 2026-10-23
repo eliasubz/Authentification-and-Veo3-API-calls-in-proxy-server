@@ -12,23 +12,21 @@ mongoose.connect(mongoUri)
     .catch((err) => console.error('MongoDB connection failed:', err));
 
 // Only forward the fields the GPU worker understands.
-const INPUT_KEYS = ['prompt', 'pet_image', 'negative_prompt', 'ip_adapter_scale', 'lora_scale', 'steps', 'guidance_scale', 'width', 'height', 'seed'];
+const INPUT_KEYS = ['prompt', 'lora_scale', 'steps', 'width', 'height', 'seed'];
 
-// Personalize with the pet's LoRA once trained, else zero-shot IP-Adapter with its first photo.
-// "{pet}" in the prompt becomes "sks cat" (LoRA) or "cat" (IP-Adapter); without it the subject is prepended.
+// Personalize with the pet's LoRA and its auto description (run 4-5: the description removes identity
+// failures, the LoRA makes it the individual pet). "{pet}" in the prompt becomes
+// "sks cat, British Shorthair, gray, ..."; without it the subject is prepended.
 async function applyPet(input, petId) {
     const pet = await Pet.findById(petId);
     if (!pet) throw new Error(`Pet ${petId} not found`);
+    if (pet.status !== 'ready') throw new Error(`Pet ${petId} is not trained yet`);
 
-    let subject = pet.species;
-    if (pet.status === 'ready') {
-        input.lora = pet.loraUrl;
-        subject = pet.instancePrompt.replace(/^a photo of /, '');
-    } else if (!input.pet_image) {
-        input.pet_image = await storage.toWorkerInput(pet.photos[0]);
-    }
-    input.prompt = input.prompt.includes('{pet}') ? input.prompt.replaceAll('{pet}', subject) : `${subject}, ${input.prompt}`;
-    return input.lora ? 'lora' : 'ip_adapter';
+    input.lora = pet.loraUrl;
+    const token = pet.instancePrompt.replace(/^a photo of /, '');
+    const subject = pet.description ? `${token}, ${pet.description},` : token;
+    input.prompt = input.prompt.includes('{pet}') ? input.prompt.replaceAll('{pet}', subject) : `${subject} ${input.prompt}`;
+    return 'lora';
 }
 
 const veo3Worker = new Worker(
@@ -40,7 +38,7 @@ const veo3Worker = new Worker(
 
         const { params } = job.data;
         const input = Object.fromEntries(INPUT_KEYS.filter((k) => params[k] !== undefined).map((k) => [k, params[k]]));
-        const method = params.petId ? await applyPet(input, params.petId) : (input.pet_image ? 'ip_adapter' : 'text');
+        const method = params.petId ? await applyPet(input, params.petId) : 'text';
 
         const { image_base64, ...metrics } = await generateImage(input);
         const resultUrl = await storage.save(`results/${job.data.jobId}.png`, Buffer.from(image_base64, 'base64'), 'image/png');

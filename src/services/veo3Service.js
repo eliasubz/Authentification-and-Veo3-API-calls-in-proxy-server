@@ -11,8 +11,10 @@ async function createVeo3Job(userId, body, cost = 1) {
 
     try {
         if (body.petId) {
-            const pet = await Pet.exists({ _id: body.petId, owner: userId }).session(session);
+            const pet = await Pet.findOne({ _id: body.petId, owner: userId }).select('status').session(session);
             if (!pet) throw new Error('Pet not found');
+            // Training takes ~1 min on an L4; generating before that has no LoRA to use
+            if (pet.status !== 'ready') throw new Error('Pet is not trained yet');
         }
 
         const user = await User.findById(userId).session(session);

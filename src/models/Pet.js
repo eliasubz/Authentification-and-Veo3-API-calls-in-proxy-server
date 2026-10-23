@@ -10,6 +10,7 @@ const PetSchema = new mongoose.Schema({
     status: { type: String, enum: ['new', 'queued', 'training', 'ready', 'failed'], default: 'new' },
     loraUrl: { type: String },
     instancePrompt: { type: String },           // e.g. "a photo of sks cat"
+    description: { type: String },              // auto description from the training worker, e.g. "British Shorthair, gray, ..."
     trainMetrics: { type: Object },             // timings_ms, size_mb, delayTimeMs, executionTimeMs, endToEndMs
     creditsUsed: { type: Number, default: 0 },
     error: { type: String },

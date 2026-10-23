@@ -66,6 +66,7 @@ exports.trainLora = async (input) => {
         return {
             lora_url: `fake://loras/${input.run_id}.safetensors`,
             instance_prompt: `a photo of sks ${input.class_word}`,
+            description: `British Shorthair, gray, short, yellow`,
             fake: true,
             timings_ms: { total: 2000 },
             endToEndMs: 2000,
