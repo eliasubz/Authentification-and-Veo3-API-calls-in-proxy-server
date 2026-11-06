@@ -15,7 +15,7 @@ function validate(req, res, next) {
         return res.status(400).json({
             message: 'Validation failed',
             errors: errors.array().map(err => ({
-                field: err.param,
+                field: err.path, // express-validator v7 (v6 used err.param)
                 message: err.msg,
             })),
         });

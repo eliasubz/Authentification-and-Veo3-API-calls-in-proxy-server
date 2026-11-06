@@ -3,7 +3,7 @@ const { jwtSecret } = require('../config');
 const User = require('../models/User');
 
 async function authMiddleware(req, res, next) {
-    const token = req.header('Authorization');
+    const token = req.header('Authorization')?.replace(/^Bearer /, '');
     if (!token) return res.status(401).json({ message: 'No token provided' });
 
     try {
@@ -14,7 +14,7 @@ async function authMiddleware(req, res, next) {
         req.user = user;
         next();
     } catch (err) {
-        res.status(400).json({ message: 'Invalid token' });
+        res.status(401).json({ message: 'Invalid token' });
     }
 }
 

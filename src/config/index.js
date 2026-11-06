@@ -1,10 +1,13 @@
 require('dotenv').config();
 const path = require('path');
 
+// A default secret would let anyone forge tokens
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not set');
+
 module.exports = {
     port: process.env.PORT || 5000,
     mongoUri: process.env.mongo_uri,
-    jwtSecret: process.env.JWT_SECRET || 'your_secret_key',
+    jwtSecret: process.env.JWT_SECRET,
     redis: {
         host: process.env.REDIS_HOST || '127.0.0.1',
         port: Number(process.env.REDIS_PORT || 6379),

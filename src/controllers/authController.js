@@ -5,7 +5,8 @@ exports.register = async (req, res) => {
         const user = await authService.register(req.body);
         res.status(201).json({ message: 'User registered successfully', user });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        const code = err.code === 11000 ? 409 : 500; // duplicate username or email
+        res.status(code).json({ message: code === 409 ? 'Username or email already taken' : err.message });
     }
 };
 
